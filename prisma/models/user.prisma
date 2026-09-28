@@ -1,0 +1,36 @@
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum Role {
+  ADMIN @map("1")
+  USER  @map("2")
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+model User {
+  id             String       @id @default(uuid()) @db.Uuid
+  email          String       @unique @db.VarChar(255)
+  password       String       @db.VarChar(255)
+  firstName      String       @db.VarChar(255)
+  lastName       String?      @db.VarChar(255)
+  avatar         String?
+  role           Role         @default(USER)
+  mailVerifiedAt DateTime?
+  authProvider   AuthProvider @default(LOCAL)
+  status         Status       @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  sessions      Session[]
+
+  @@index([email])
+  @@map("users")
+}

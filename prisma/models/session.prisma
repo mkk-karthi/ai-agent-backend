@@ -1,0 +1,13 @@
+model Session {
+  id        Int       @id @default(autoincrement())
+  userId    String    @db.Uuid
+  key       String    @db.VarChar(255)
+  value     String
+  expiredAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([key, userId])
+  @@map("sessions")
+}

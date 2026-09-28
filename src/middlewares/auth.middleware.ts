@@ -1,0 +1,41 @@
+import type { Request, RequestHandler } from "express";
+import { ApiError } from "../utils/api-error";
+import { verifyAccessToken } from "../utils/jwt";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+      };
+    }
+  }
+}
+
+export const authenticate: RequestHandler = (req, res, next) => {
+  const authorization = req.headers.authorization;
+
+  if (!authorization) {
+    console.warn("Authorization is required");
+    next(new ApiError(401, "Unauthorized"));
+    return;
+  }
+
+  const [scheme, token] = authorization.split(" ");
+  if (scheme !== "Bearer" || !token) {
+    console.warn("Invalid Token format");
+    next(new ApiError(401, "Unauthorized"));
+    return;
+  }
+
+  try {
+    const payload = verifyAccessToken(token);
+    req.user = { id: payload.userId };
+
+    next();
+  } catch {
+    console.warn("Invalid Token");
+    next(new ApiError(401, "Unauthorized"));
+  }
+  return;
+};
