@@ -39,7 +39,8 @@ app.use(
   rateLimit({
     windowMs: 60 * 1000,
     max: 60,
-    message: "429 Too Many Requests",
+    statusCode: 429,
+    message: { success: false, code: 429, message: "Too Many Requests" },
   }),
 );
 

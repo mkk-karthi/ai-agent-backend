@@ -1,9 +1,10 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 import { ApiError } from "../utils/api-error";
+import logger from "../utils/logger";
 
 export const errorMiddleware: ErrorRequestHandler = (err, req, res, next) => {
-  console.error(err);
+  logger.error(err);
 
   if (err instanceof ZodError) {
     let errors: { [index: string]: string } = {};

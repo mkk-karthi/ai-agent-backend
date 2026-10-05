@@ -3,6 +3,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_NAME: z.string(),
   PORT: z.coerce.number().int().positive().default(8000),
   DATABASE_URL: z.string().min(1),
 
@@ -19,6 +20,16 @@ const envSchema = z.object({
 
   ENCRYPTION_KEY: z.string().min(32),
   FRONTEND_URL: z.url(),
+
+  GEMINI_API_KEY: z.string(),
+  GEMINI_DEFAULT_MODEL: z.string(),
+  GENAI_TEST: z.string().transform((v) => v == "true"),
+
+  MAIL_HOST: z.string().default("smtp.gmail.com"),
+  MAIL_PORT: z.coerce.number().default(587),
+  MAIL_USERNAME: z.string(),
+  MAIL_PASSWORD: z.string(),
+  MAIL_FROM_ADDRESS: z.string(),
 });
 
 export const env = envSchema.parse(process.env);

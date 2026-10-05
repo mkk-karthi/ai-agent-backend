@@ -1,0 +1,33 @@
+enum AiRole {
+  SYSTEM
+  ASSISTANT
+  USER
+}
+
+model ConversationMessages {
+  id             String    @id @default(uuid()) @db.Uuid
+  message        String    @db.Text
+  conversationId String    @db.Uuid
+  role           AiRole
+  userId         String    @db.Uuid
+  providerId     Int
+  modelId        Int
+  promptTokens   Int       @default(0)
+  outputTokens   Int       @default(0)
+  status         Status    @default(ACTIVE)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  provider     Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  model        Model        @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  parentId String?                @db.Uuid
+  parent   ConversationMessages?  @relation("ParentMessage", fields: [parentId], references: [id], onDelete: Cascade)
+  children ConversationMessages[] @relation("ParentMessage")
+
+  @@index([userId])
+  @@map("conversation_messages")
+}

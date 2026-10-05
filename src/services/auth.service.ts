@@ -11,6 +11,8 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from ".
 import { comparePassword, hashPassword } from "../utils/password";
 import { decryption, encryption, generateOtp, hashToken } from "../utils/cryptoUtils";
 import { Role, type User } from "@prisma/client";
+import { sendMail } from "../utils/mail";
+import logger from "../utils/logger";
 
 export const RoleValueMap: Record<Role, number> = {
   [Role.ADMIN]: 1,
@@ -27,12 +29,13 @@ const generateUsername = (email: string): string => {
 
 export const authService = {
   async register(input: RegisterInput) {
+    // Check is mail already exist
     const existEmail = await prisma.user.findUnique({ where: { email: input.email } });
-
     if (existEmail) {
       throw new ApiError(409, "Email already exist");
     }
 
+    // Hash the password
     const password = await hashPassword(input.password);
 
     const user = await prisma.user.create({
@@ -49,7 +52,7 @@ export const authService = {
       },
     });
 
-    this.generateVeifyEmailToken(user.id);
+    await this.generateVeifyEmailToken(user.id);
 
     return user;
   },
@@ -68,7 +71,7 @@ export const authService = {
     }
 
     if (!user.mailVerifiedAt) {
-      this.generateVeifyEmailToken(user.id);
+      await this.generateVeifyEmailToken(user.id);
       throw new ApiError(400, "Please verify the email");
     }
 
@@ -130,7 +133,7 @@ export const authService = {
       payload = verifyRefreshToken(refreshToken);
     } catch {
       // throw new ApiError(400, "Invalid Token");
-      console.error("Invalid Token");
+      logger.warn("Invalid Token");
       return;
     }
 
@@ -142,7 +145,7 @@ export const authService = {
 
     if (!storedToken) {
       // throw new ApiError(400, "Token revoked");
-      console.error("Token revoked");
+      logger.warn("Token revoked");
       return;
     }
 
@@ -170,7 +173,23 @@ export const authService = {
         userId,
       },
     });
-    console.log("verifyEmailToken", verificationToken);
+
+    const VerifyUrl = `${env.FRONTEND_URL}/auth/verify-email/${verificationToken}`;
+    const mailContent = `<div style="font-family: Arial, sans-serif, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto;">
+      <h1 style="text-align:center; color: blue;">${env.APP_NAME}</h1>
+      <h2>Please verify your email address</h2>
+      <p>Hi ${user.firstName},</p>
+      <p>Thanks for signing up with us! Please click the button below to confirm your email address and activate your account.</p>
+      <p>If you didn't request this, you can safely ignore this email.</p>
+      <div style="margin: 10px; text-align:center;">
+        <a href="${VerifyUrl}" target="_blank" style="font-size: 16px; font-weight: bold; color: #ffffff; text-decoration: none; padding: 12px 30px; display: inline-block; background-color: #414ef9; border-radius: 4px; border: 1px solid #414ef9;">Verify Email Address</a>
+        </div>
+      <p>BIf the above link does not work for you, copy this link and paste in a new window: <a href="${VerifyUrl}" target="_blank">${VerifyUrl}</a></p>
+      <br>
+      <p>Best regards,</p>
+      <p>The ${env.APP_NAME} Team</p>
+    </div>`;
+    return await sendMail(user.email, "Mail Verification", mailContent);
   },
 
   async verifyMail(token: string) {
@@ -212,7 +231,7 @@ export const authService = {
 
     if (!user) {
       // throw new ApiError(400, "Invalid email & password");
-      console.log("Email not found");
+      logger.warn("Email not found");
       return;
     }
     await prisma.session.updateMany({
@@ -230,7 +249,20 @@ export const authService = {
         userId: user.id,
       },
     });
-    console.log("otp", otp);
+    const mailContent = `<div style="font-family: Arial, sans-serif, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto;">
+      <p>Hi ${user.firstName},</p>
+      <p>Use the following One-Time Password (OTP) to complete your password reset request. This code is confidential and should not be shared. </p>
+      <div style="text-align:center;">
+        <strong style=" background-color: #f0f7fc; border: 1px dashed #3498db; border-radius: 6px; padding: 15px 30px; letter-spacing: 5px; font-size: 28px; font-family: monospace; display: inline-block;">
+          ${otp}
+        </strong>
+      </div>
+      <p>This OTP is valid for the next ${env.RESET_PASSWORD_EXPIRES_IN} minutes. If you did not request this change, please secure your account immediately. </p>
+      <br>
+      <p>Thanks,</p>
+      <p>The ${env.APP_NAME} Team</p>
+    </div>`;
+    return await sendMail(user.email, "Reset your password", mailContent);
   },
 
   async resetPassword(input: resetPasswordInput) {

@@ -8,7 +8,7 @@ enum Role {
   USER  @map("2")
 }
 
-enum Status {
+enum UserStatus {
   ACTIVE
   INACTIVE
 }
@@ -23,13 +23,16 @@ model User {
   role           Role         @default(USER)
   mailVerifiedAt DateTime?
   authProvider   AuthProvider @default(LOCAL)
-  status         Status       @default(ACTIVE)
+  status         UserStatus   @default(ACTIVE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  refreshTokens RefreshToken[]
-  sessions      Session[]
+  refreshTokens        RefreshToken[]
+  sessions             Session[]
+  apiTokens            ApiToken[]
+  conversations        Conversation[]
+  conversationMessages ConversationMessages[]
 
   @@index([email])
   @@map("users")

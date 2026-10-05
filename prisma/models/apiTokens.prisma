@@ -1,0 +1,17 @@
+model ApiToken {
+  id         Int       @id @default(autoincrement())
+  token      String?
+  providerId Int
+  userId     String    @db.Uuid
+  status     Status    @default(INACTIVE)
+  createdAt  DateTime  @default(now())
+  createdBy  String    @db.Uuid
+  deletedAt  DateTime?
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, userId])
+  @@index([token, userId])
+  @@map("api_tokens")
+}

@@ -1,0 +1,18 @@
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+model Provider {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique @db.VarChar(255)
+  status    Status    @default(ACTIVE)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  models               Model[]
+  apiTokens            ApiToken[]
+  conversationMessages ConversationMessages[]
+
+  @@map("providers")
+}
