@@ -322,9 +322,9 @@ export const conversationService = {
     return { data, pageSize, nextToken: nextId };
   },
 
-  async getConversation(conversationId: string) {
+  async getConversation(conversationId: string, userId: string) {
     const data = await prisma.conversation.findFirst({
-      where: { id: conversationId, status: "ACTIVE", deletedAt: null },
+      where: { id: conversationId, userId, status: "ACTIVE", deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -367,7 +367,7 @@ export const conversationService = {
     }
   },
 
-  async conversationMessages(conversationId: string, { pageSize, nextToken }: PaginationType) {
+  async conversationMessages(conversationId: string, userId: string, { pageSize, nextToken }: PaginationType) {
     const conversation = await prisma.conversation.findFirst({
       where: { id: conversationId, status: "ACTIVE", deletedAt: null },
       select: {

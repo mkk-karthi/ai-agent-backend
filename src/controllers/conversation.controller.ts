@@ -9,11 +9,11 @@ export const conversationController = {
 
     await conversationService.streamChat({
       type,
+      id: req.body.id ?? "",
       prompt: req.body.prompt ?? "",
       modelId: req.body.modelId ?? "",
       conversationId: req.body.conversationId ?? "",
       userId: req.user.id,
-      id: req.body.id ?? "",
       onStart: () => {
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Transfer-Encoding", "chunked");
@@ -49,7 +49,7 @@ export const conversationController = {
     if (!req.user) throw new ApiError(401, "Unauthorized");
     if (!req.params.id) throw new ApiError(400, "Id is required");
 
-    const data = await conversationService.getConversation(req.params.id as string);
+    const data = await conversationService.getConversation(req.params.id as string, req.user?.id);
     sendResponse(res, 200, data, "Conversation fetched succesfully");
   },
 
@@ -57,7 +57,11 @@ export const conversationController = {
     if (!req.user) throw new ApiError(401, "Unauthorized");
     if (!req.params.id) throw new ApiError(400, "Id is required");
 
-    const data = await conversationService.conversationMessages(req.params.id as string, req.body);
+    const data = await conversationService.conversationMessages(
+      req.params.id as string,
+      req.user?.id,
+      req.body,
+    );
     sendResponse(res, 200, data, "Conversation messages fetched succesfully");
   },
 
