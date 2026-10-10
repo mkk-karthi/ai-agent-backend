@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role, Status } from "@prisma/client";
 import z from "zod";
 
 export const passwordSchema = z
@@ -22,6 +22,7 @@ export const updateUserSchema = z
       .max(50, "Last name cannot exceed 50 characters")
       .nullish(),
     role: z.enum(Role),
+    status: z.enum(Status),
   })
   .partial()
   .refine((data) => Object.values(data).some((value) => value !== undefined), {

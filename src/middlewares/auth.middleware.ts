@@ -2,6 +2,7 @@ import type { Request, RequestHandler } from "express";
 import { ApiError } from "../utils/api-error";
 import { verifyAccessToken } from "../utils/jwt";
 import logger from "../utils/logger";
+import { prisma } from "../config/prisma";
 
 declare global {
   namespace Express {
@@ -13,7 +14,7 @@ declare global {
   }
 }
 
-export const authenticate: RequestHandler = (req, res, next) => {
+export const authenticate: RequestHandler = async (req, res, next) => {
   const authorization = req.headers.authorization;
 
   if (!authorization) {
@@ -31,6 +32,21 @@ export const authenticate: RequestHandler = (req, res, next) => {
 
   try {
     const payload = verifyAccessToken(token);
+
+    try {
+      const user = await prisma.user.findFirst({
+        where: { id: payload.userId },
+      });
+
+      if (!user) {
+        throw new ApiError(400, "Invalid Token");
+      } else if (user.status != "ACTIVE") {
+        next(new ApiError(401, "Unauthorized"));
+      }
+    } catch {
+      throw new ApiError(400, "Invalid Token");
+    }
+
     req.user = { id: payload.userId };
 
     next();

@@ -33,6 +33,7 @@ model User {
   apiTokens            ApiToken[]
   conversations        Conversation[]
   conversationMessages ConversationMessages[]
+  tokenUsages          TokenUsage[]
 
   @@index([email])
   @@map("users")

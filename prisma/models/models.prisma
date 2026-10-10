@@ -6,19 +6,18 @@ enum ModelTypes {
 }
 
 model Model {
-  id               Int        @id @default(autoincrement())
-  modelName        String     @db.VarChar(255)
-  modelKey         String     @unique @db.VarChar(255)
-  type             ModelTypes @default(TEXT)
-  inputTokenLimit  Int        @default(0)
-  outputTokenLimit Int        @default(0)
-  providerId       Int
-  status           Status     @default(ACTIVE)
-  createdAt        DateTime   @default(now())
-  deletedAt        DateTime?
+  id         Int        @id @default(autoincrement())
+  modelName  String     @db.VarChar(255)
+  modelKey   String     @unique @db.VarChar(255)
+  type       ModelTypes @default(TEXT)
+  providerId Int
+  status     Status     @default(ACTIVE)
+  createdAt  DateTime   @default(now())
+  deletedAt  DateTime?
 
   provider             Provider               @relation(fields: [providerId], references: [id], onDelete: Cascade)
   conversationMessages ConversationMessages[]
+  tokenUsages          TokenUsage[]
 
   @@unique([modelKey, providerId])
   @@map("models")

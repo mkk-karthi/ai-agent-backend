@@ -8,7 +8,12 @@ import { paginationSchema } from "../modules/common.schema";
 
 const userRouter = Router();
 
-userRouter.post("/", adminMiddleware, validate(paginationSchema), asyncHandler(userController.getUsers));
+userRouter.post(
+  "/",
+  adminMiddleware,
+  validate(paginationSchema),
+  asyncHandler(userController.getUsers),
+);
 userRouter.get("/:id", adminMiddleware, asyncHandler(userController.getUser));
 userRouter.put("/", validate(updateUserSchema), asyncHandler(userController.updateUser));
 userRouter.post(
@@ -21,6 +26,12 @@ userRouter.put(
   adminMiddleware,
   validate(updateUserSchema),
   asyncHandler(userController.updateUser),
+);
+userRouter.patch(
+  "/status/:id",
+  adminMiddleware,
+  validate(updateUserSchema),
+  asyncHandler(userController.updateUserStatus),
 );
 
 export default userRouter;

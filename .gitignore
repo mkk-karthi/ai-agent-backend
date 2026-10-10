@@ -16,3 +16,9 @@ logs
 *.njsproj
 *.sln
 *.sw?
+*.tsbuildinfo
+
+# Test compiled outputs (if accidentally emitted)
+tests/**/*.js
+tests/**/*.js.map
+tests/**/*.d.ts

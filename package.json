@@ -22,7 +22,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@google/genai": "^2.24.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "bcrypt": "^6.0.0",
@@ -35,6 +34,7 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
     "nodemailer": "^10.0.13",
+    "openai": "^7.28.0",
     "pg": "^8.23.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",

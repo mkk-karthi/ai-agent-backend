@@ -25,9 +25,9 @@ export const errorMiddleware: ErrorRequestHandler = (err, req, res, next) => {
   }
 
   if (err instanceof ApiError) {
-    res.status(err.statusCode || 400).json({
+    res.status(err.status || 400).json({
       success: false,
-      code: err.statusCode || 400,
+      code: err.status || 400,
       message: err.message,
       errors: err.details,
     });

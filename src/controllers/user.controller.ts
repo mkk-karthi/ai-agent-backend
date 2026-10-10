@@ -7,7 +7,7 @@ export const userController = {
   async getUsers(req: Request, res: Response) {
     const users = await userService.getUsers(req.body);
 
-    if (!users) throw new ApiError(404, "Users not found");
+    if (!users) throw new ApiError(200, "Users not found");
 
     sendResponse(res, 200, users, "User fetched succesfully");
   },
@@ -16,7 +16,7 @@ export const userController = {
     if (!req.user) throw new ApiError(401, "Unauthorized");
 
     const user = await userService.getUser((req.params.id || req.user.id) as string);
-    if (!user) throw new ApiError(404, "User not found");
+    if (!user) throw new ApiError(200, "User not found");
 
     sendResponse(res, 200, user, "User fetched succesfully");
   },
@@ -25,7 +25,7 @@ export const userController = {
     if (!req.user) throw new ApiError(401, "Unauthorized");
 
     const user = await userService.getUser(req.user.id);
-    if (!user) throw new ApiError(404, "User not found");
+    if (!user) throw new ApiError(200, "User not found");
 
     sendResponse(res, 200, user, "User fetched succesfully");
   },
@@ -33,13 +33,20 @@ export const userController = {
   async updateUser(req: Request, res: Response) {
     if (!req.user) throw new ApiError(401, "Unauthorized");
 
-    const data = await userService.updateUser(
-      (req.params.id || req.user.id) as string,
-      req.body,
-      req.user.id,
-    );
+    const data = await userService.updateUser(req.user.id, req.body);
 
     sendResponse(res, 200, data, "User updated succesfully");
+  },
+
+  // Update use status only for admin
+  async updateUserStatus(req: Request, res: Response) {
+    if (!req.user) throw new ApiError(401, "Unauthorized");
+
+    const data = await userService.updateUser(req.params.id as string, {
+      status: req.body.status,
+    });
+
+    sendResponse(res, 200, data, "User status updated");
   },
 
   async changePassword(req: Request, res: Response) {

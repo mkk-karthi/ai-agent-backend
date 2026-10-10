@@ -64,6 +64,8 @@ export const authService = {
       throw new ApiError(400, "Invalid email & password");
     }
 
+    if (user.status != "ACTIVE") throw new ApiError(401, "Access denied");
+
     const verify = await comparePassword(input.password, user.password);
 
     if (!verify) {
@@ -119,6 +121,21 @@ export const authService = {
 
     if (!storedToken) {
       throw new ApiError(400, "Token revoked");
+    }
+
+    try {
+      const user = await prisma.user.findFirst({
+        where: { id: payload.userId },
+      });
+
+      if (!user) {
+        throw new ApiError(400, "Invalid Token");
+      } else if (user.status != "ACTIVE") {
+        await this.logout(refreshToken);
+        throw new ApiError(400, "Token revoked");
+      }
+    } catch {
+      throw new ApiError(400, "Invalid Token");
     }
 
     const accessToken = generateAccessToken({ userId: payload.userId });

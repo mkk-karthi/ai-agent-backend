@@ -21,11 +21,11 @@
     "composite": true,
   },
   "include": [
-    "src/**/*.ts",
-    "tests/**/*.ts",
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "tests"
   ]
 }

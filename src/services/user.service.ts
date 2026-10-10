@@ -44,7 +44,7 @@ export const userService = {
           firstName: true,
           lastName: true,
           createdAt: true,
-          authProvider: true,
+          status: true,
         },
         skip: page * pageSize,
         take: pageSize,
@@ -80,27 +80,34 @@ export const userService = {
     return user;
   },
 
-  async updateUser(id: string, input: updateUserinput, authUserId: string) {
-    let update: Partial<User> = {};
+  async updateUser(id: string, input: updateUserinput) {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) throw new ApiError(400, "Invalid Id");
+
+    let update: Prisma.UserUpdateInput = {};
     if (input.firstName) update["firstName"] = input.firstName;
     if (input.lastName) update["lastName"] = input.lastName;
+    if (input.status) update["status"] = input.status;
 
-    const authUser = await prisma.user.findFirst({ where: { id: authUserId } });
+    const authUser = await prisma.user.findFirst({ where: { id: id } });
     if (authUser?.role == "ADMIN" && input.role) update["role"] = input.role;
 
-    const updateUser = await prisma.user.update({
-      where: { id },
-      data: update,
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        firstName: true,
-        lastName: true,
-        createdAt: true,
-      },
-    });
-    return updateUser;
+    if (Object.keys(update).length > 0) {
+      const updateUser = await prisma.user.update({
+        where: { id },
+        data: update,
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          firstName: true,
+          lastName: true,
+          createdAt: true,
+        },
+      });
+      return updateUser;
+    }
+    return {};
   },
 
   async changePassword(id: string, input: changePasswordInput) {

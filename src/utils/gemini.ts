@@ -15,12 +15,12 @@ Rules:
 - If the user asks for code, provide clean production-ready code.
 `.trim();
 
-export const validateApiKey = async (token: string): Promise<boolean> => {
+export const validateApiKey = async (token: string, model: string): Promise<boolean> => {
   try {
     const ai = new GoogleGenAI({ apiKey: token });
 
     await ai.models.countTokens({
-      model: env.GEMINI_DEFAULT_MODEL,
+      model: model,
       contents: "test",
     });
 
@@ -33,6 +33,7 @@ export const validateApiKey = async (token: string): Promise<boolean> => {
 export const generateTitle = async (
   userMessage: string,
   token: string | undefined,
+  model: string,
   maxRetries = 5,
   baseDelayMs = 1000,
 ) => {
@@ -40,7 +41,6 @@ export const generateTitle = async (
 
   const ai = new GoogleGenAI({ apiKey: token });
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const model = env.GEMINI_DEFAULT_MODEL;
     try {
       const response = await ai.models.generateContent({
         model,
@@ -64,6 +64,8 @@ ${userMessage}
           maxOutputTokens: 30,
         },
       });
+
+      logger.info(`Gemini generated title res: ${response.text}`);
 
       const title =
         response.text
@@ -91,95 +93,6 @@ ${userMessage}
   }
 };
 
-async function* mockGenerateContentStream() {
-  const dummyText = `\`\`\`javascript
-import OpenAI from 'openai';
-
-/**
- * EXPLAINING AI IN 100 WORDS:
- * Artificial Intelligence (AI) simulates human intelligence in machines, enabling them to learn, reason, and solve 
- * complex problems. Generative AI (GenAI), a specialized subset of AI, focuses on creating entirely new content—such 
- * as text, code, images, or audio—by analyzing and learning patterns from massive datasets. Integrating GenAI into 
- * Node.js applications allows developers to build intelligent, context-aware systems capable of automated content 
- * generation, natural language understanding, semantic search, and interactive conversational agents, transforming 
- * static applications into dynamic, cognitive experiences that scale efficiently.
- */
-
-// Initialize the OpenAI client with your API key from environment variables
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, 
-});
-
-/**
- * Generates text content using OpenAI's GPT model.
- * @param {string} prompt - The input prompt for the AI model.
- * @returns {Promise<string>} The generated response.
- */
-export async function generateContent(prompt) {
-  if (!prompt) {
-    throw new Error('Prompt is required');
-  }
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Cost-effective, high-speed model for production
-      messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-    });
-
-    return response.choices[0].message.content;
-  } catch (error) {
-    console.error('GenAI Integration Error:', error.message);
-    throw error;
-  }
-}
-
-// Example Usage:
-// (async () => {
-//   const result = await generateContent('Write a tagline for a Node.js framework.');
-//   console.log(result);
-// })();
-\`\`\`
-`;
-
-  // Split into small pieces to mimic chunks
-  const chunks = dummyText.split(" ") || [dummyText];
-
-  // Simulate streaming text chunks
-  for (const piece of chunks) {
-    // Artificial 50ms delay per chunk
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    yield {
-      text: piece + " ",
-      usageMetadata: null, // Most SDKs return usage metadata only in the final chunk
-    };
-  }
-
-  // Yield a final chunk containing the usage statistics
-  yield {
-    text: "",
-    usageMetadata: {
-      promptTokenCount: 15,
-      candidatesTokenCount: chunks.length * 2,
-      totalTokenCount: 15 + chunks.length * 2,
-    },
-  };
-}
-
-const mockAi = {
-  models: {
-    generateContentStream: async () => {
-      // Return the async generator instance
-      return mockGenerateContentStream();
-    },
-  },
-};
-
 export const generateStream = async (
   contents: string | ContentListUnion,
   model: string,
@@ -192,25 +105,22 @@ export const generateStream = async (
   const ai = new GoogleGenAI({ apiKey: token });
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      let resonseStream;
-      if (env.GENAI_TEST) resonseStream = await mockAi.models.generateContentStream();
-      else
-        resonseStream = await ai.models.generateContentStream({
-          model,
-          contents,
-          config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
+      const resonseStream = await ai.models.generateContentStream({
+        model,
+        contents,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
 
-            maxOutputTokens: 4096,
-            temperature: 0.7,
+          maxOutputTokens: 4096,
+          temperature: 0.7,
 
-            tools: [
-              {
-                // googleSearch: {},
-              },
-            ],
-          },
-        });
+          tools: [
+            {
+              // googleSearch: {},
+            },
+          ],
+        },
+      });
 
       return resonseStream;
     } catch (error) {

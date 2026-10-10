@@ -21,15 +21,22 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z.string().min(32),
   FRONTEND_URL: z.url(),
 
-  GEMINI_API_KEY: z.string(),
-  GEMINI_DEFAULT_MODEL: z.string(),
-  GENAI_TEST: z.string().transform((v) => v == "true"),
+  TAVILY_API_KEY: z.string().optional().default(""),
 
   MAIL_HOST: z.string().default("smtp.gmail.com"),
   MAIL_PORT: z.coerce.number().default(587),
   MAIL_USERNAME: z.string(),
   MAIL_PASSWORD: z.string(),
   MAIL_FROM_ADDRESS: z.string(),
+
+  MAX_TOOL_TIMES: z.coerce.number().int().positive().default(5),
+  DEFAULT_MAX_TOKENS: z.coerce.number().int().positive().default(4096),
+  DEFAULT_TEMPERATURE: z.coerce
+    .number()
+    .min(0, "Value must be at least 0")
+    .max(1, "Value must be at most 1")
+    .multipleOf(0.1, "Only 1 decimal place is allowed")
+    .default(0.7),
 });
 
 export const env = envSchema.parse(process.env);
