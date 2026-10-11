@@ -50,7 +50,6 @@
     "prisma@7.10.0": true,
     "@parcel/watcher@2.6.0": true,
     "unrs-resolver@1.12.2": true,
-    "@google/genai@2.24.0": true,
     "protobufjs@7.6.6": true
   },
   "devDependencies": {

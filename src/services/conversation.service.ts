@@ -1,5 +1,4 @@
 import { prisma } from "../config/prisma";
-import { ApiError as GenAIApiError } from "@google/genai";
 import { ApiError } from "../utils/api-error";
 import type { PaginationType } from "../modules/common.schema";
 import type { Prisma } from "@prisma/client";
@@ -8,6 +7,7 @@ import { env } from "../config/env";
 import { AiService } from "./ai.service";
 import type { GenerateOptions } from "../types/ai.types";
 import logger from "../utils/logger";
+import { APIError } from "openai";
 
 interface streamChatProps extends chatInput {
   type: "generate" | "edit" | "retry";
@@ -268,7 +268,7 @@ Rules:
     } catch (error) {
       logger.error("AI streaming error", error);
 
-      if (error instanceof GenAIApiError) {
+      if (error instanceof APIError) {
         onChunk(
           "error",
           JSON.stringify({ status: error.status, message: "An error occurred during streaming" }),

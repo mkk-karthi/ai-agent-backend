@@ -8,7 +8,7 @@ High-performance TypeScript backend API for the MKK AI Agent platform. Built wit
 
 - **Runtime & Framework**: Node.js, TypeScript, Express.js 5.2
 - **Database & ORM**: PostgreSQL, Prisma ORM 7.10 (modular schemas)
-- **AI SDKs & Providers**: `openai` (Chat Completions & compatible endpoints), `@google/genai`
+- **AI SDKs & Providers**: `openai` (Chat Completions & compatible endpoints)
 - **Security & Auth**: JWT (HttpOnly Cookies), bcrypt, AES encryption (`cryptoUtils`), Helmet, CORS, Rate Limiting
 - **Validation & Tools**: Zod, Winston logger, Nodemailer
 - **Testing**: Jest, Supertest, ts-jest

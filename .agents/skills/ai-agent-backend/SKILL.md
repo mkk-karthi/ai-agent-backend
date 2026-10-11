@@ -67,7 +67,6 @@ backend/
 │   ├── utils/
 │   │   ├── ai-tools.ts              # Multi-tier Autonomous Web Search (Tavily/Jina/DuckDuckGo)
 │   │   ├── cryptoUtils.ts           # AES-256 encryption/decryption helpers
-│   │   ├── gemini.ts                # Native @google/genai utility
 │   │   ├── api-error.ts             # Standardized ApiError class
 │   │   ├── api-response.ts          # Standardized ApiResponse class
 │   │   ├── async-handler.ts         # Express async route wrapper
