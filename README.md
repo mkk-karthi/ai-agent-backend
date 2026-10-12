@@ -4,6 +4,23 @@ High-performance TypeScript backend API for the MKK AI Agent platform. Built wit
 
 ---
 
+## 🔗 Repositories
+
+- **Backend (This Repository)**: [https://github.com/mkk-karthi/ai-agent-backend](https://github.com/mkk-karthi/ai-agent-backend)
+- **Frontend Repository**: [https://github.com/mkk-karthi/ai-agent-frontend](https://github.com/mkk-karthi/ai-agent-frontend)
+
+---
+
+## 📸 Screenshots
+
+### 💬 Real-Time Chat Interface
+![Chat Interface](docs/images/chat-interface.png)
+
+### 📊 Admin Analytics Dashboard
+![Admin Dashboard](docs/images/dashboard.png)
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Runtime & Framework**: Node.js, TypeScript, Express.js 5.2
