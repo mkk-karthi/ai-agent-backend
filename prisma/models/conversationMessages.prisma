@@ -20,7 +20,7 @@ model ConversationMessages {
   providerId     Int
   modelId        Int
   status         ConversationStatus @default(ACTIVE)
-  toolCalls      Json?
+  toolCalls      String?            @db.Text
   createdAt      DateTime           @default(now())
   deletedAt      DateTime?
 
@@ -34,6 +34,6 @@ model ConversationMessages {
   children   ConversationMessages[] @relation("ParentMessage")
   tokenUsage TokenUsage?
 
-  @@index([userId])
+  @@index([conversationId, userId], where: { status: "ACTIVE" })
   @@map("conversation_messages")
 }

@@ -1,12 +1,15 @@
 import type { RequestHandler } from "express";
 import type { ZodType } from "zod";
 
-export const validate = (schema: ZodType, type = "body"): RequestHandler => {
+export const validate = (
+  schema: ZodType,
+  type: "params" | "query" | "body" = "body",
+): RequestHandler => {
   return async (req, res, next) => {
     let result;
-    if (type == "query") {
+    if (type === "query") {
       result = await schema.safeParseAsync(req.query);
-    } else if (type == "params") {
+    } else if (type === "params") {
       result = await schema.safeParseAsync(req.params);
     } else result = await schema.safeParseAsync(req.body);
 

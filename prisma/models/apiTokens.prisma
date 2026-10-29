@@ -5,7 +5,7 @@ model ApiToken {
   userId     String    @db.Uuid
   status     Status    @default(INACTIVE)
   createdAt  DateTime  @default(now())
-  createdBy  String    @db.Uuid
+  updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
 
   provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)

@@ -5,6 +5,11 @@ import userRouter from "./user.route";
 import conversationRouter from "./conversation.route";
 import tokenRouter from "./token.route";
 import providerRouter from "./provider.route";
+import { asyncHandler } from "../utils/async-handler";
+import { conversationController } from "../controllers/conversation.controller";
+import { validate } from "../middlewares/validate.middleware";
+import { paginationSchema } from "../modules/common.schema";
+
 const router = Router();
 
 router.get("/test", async (req, res) => {
@@ -18,5 +23,17 @@ router.use("/user", authenticate, userRouter);
 router.use("/conversation", authenticate, conversationRouter);
 router.use("/token", authenticate, tokenRouter);
 router.use("/provider", authenticate, providerRouter);
+
+router.get(
+  "/shared/conversation/:id",
+  authenticate,
+  asyncHandler(conversationController.getShareConversation),
+);
+router.get(
+  "/shared/conversation/messages/:id",
+  authenticate,
+  validate(paginationSchema, "query"),
+  asyncHandler(conversationController.sharedConversationMessages),
+);
 
 export default router;

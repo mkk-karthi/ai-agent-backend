@@ -40,6 +40,7 @@ backend/
 │   ├── models/                  # Modular Prisma schema definitions
 │   │   ├── apiTokens.prisma     # Encrypted user provider API keys
 │   │   ├── conversationMessages.prisma # Message nodes (tree structure)
+│   │   ├── conversationShare.prisma    # Conversation sharing (PUBLIC / SPECIFIC_USER)
 │   │   ├── conversations.prisma # Chat sessions/threads
 │   │   ├── models.prisma        # Available AI models
 │   │   ├── providers.prisma     # AI Providers (Gemini, OpenAI, etc.)
@@ -85,6 +86,7 @@ The backend architecture includes:
 - 🧠 **Context & Tree Memory**: Sliding window context pruning with parent-child message branching.
 - 🪙 **Token Metering**: Accurate turn-by-turn token accounting (`token_usage`).
 - 🔐 **Cryptographic Security**: AES-256 encrypted isolation for user API credentials.
+- 🔗 **Shareable Conversations**: Granular thread sharing (`PUBLIC` or `SPECIFIC_USER` email restrictions) with no-auth public read endpoints.
 
 ---
 
@@ -186,6 +188,7 @@ Once setup and database seeding are complete:
 | :--- | :--- | :--- | :--- |
 | **Auth** | `/auth` | `POST /register`, `/login`, `/logout`, `/verify-mail`, `/refresh-token` | User authentication & sessions |
 | **User** | `/user` | `GET /profile`, `PUT /profile`, `PUT /change-password`, `GET /list` (Admin) | Profile management & admin controls |
-| **Conversation** | `/conversation` | `POST /generate-stream-content`, `POST /retry-stream-content`, `GET /list`, `DELETE /:id` | Chat streaming & thread management |
+| **Conversation** | `/conversation` | `POST /generate-stream-content`, `POST /retry-stream-content`, `GET /list`, `DELETE /:id`, `GET /share/options`, `POST /share` | Chat streaming, thread management, & sharing configuration |
+| **Shared Chat** | `/shared/conversation` | `GET /:id`, `GET /messages/:id` | Whitelisted public read endpoints for shared conversations |
 | **Provider** | `/provider` | `GET /list`, `PUT /:id` | AI providers & model listing |
 | **API Tokens** | `/api-token` | `POST /create`, `GET /list`, `DELETE /:id` | Encrypted user provider API keys |

@@ -1,5 +1,6 @@
 import z from "zod";
 import { prisma } from "../config/prisma";
+import { ConversationShareType } from "@prisma/client";
 
 export const chatSchema = z
   .object({
@@ -53,18 +54,16 @@ export const chatSchema = z
 
 export const retryChatSchema = z
   .object({
-    conversationId: z
-      .string()
-      .refine(async (val) => {
-        if (val) {
-          try {
-            const exists = await prisma.conversation.findFirst({ where: { id: val } });
-            return !!exists;
-          } catch {
-            return false;
-          }
-        } else return true;
-      }, "The selected conversation id is invalid"),
+    conversationId: z.string().refine(async (val) => {
+      if (val) {
+        try {
+          const exists = await prisma.conversation.findFirst({ where: { id: val } });
+          return !!exists;
+        } catch {
+          return false;
+        }
+      } else return true;
+    }, "The selected conversation id is invalid"),
     id: z.string(),
   })
   .refine(
@@ -100,5 +99,35 @@ export const retryChatSchema = z
     },
   );
 
+export const conversationShareSchema = z
+  .object({
+    id: z.string().refine(async (val) => {
+      if (val) {
+        try {
+          const exists = await prisma.conversation.findFirst({ where: { id: val } });
+          return !!exists;
+        } catch {
+          return false;
+        }
+      } else return true;
+    }, "The selected id is invalid"),
+    type: z.enum(ConversationShareType),
+    userMails: z
+      .array(z.email("Invalid email").transform((v) => v.toLowerCase().trim()))
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === ConversationShareType.SPECIFIC_USER) {
+      if (!data.userMails || data.userMails.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "At least one email is required for specific users",
+          path: ["userMails"],
+        });
+      }
+    }
+  });
+
 export type chatInput = z.infer<typeof chatSchema>;
 export type retryChatInput = z.infer<typeof retryChatSchema>;
+export type conversationShareInput = z.infer<typeof conversationShareSchema>;

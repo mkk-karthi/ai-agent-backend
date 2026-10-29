@@ -37,6 +37,7 @@ const envSchema = z.object({
     .max(1, "Value must be at most 1")
     .multipleOf(0.1, "Only 1 decimal place is allowed")
     .default(0.7),
+  MAX_PIN_CONVERSATION: z.coerce.number().int().positive().default(5),
 });
 
 export const env = envSchema.parse(process.env);

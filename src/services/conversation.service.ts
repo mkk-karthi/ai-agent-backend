@@ -1,8 +1,8 @@
 import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/api-error";
 import type { PaginationType } from "../modules/common.schema";
-import type { Prisma } from "@prisma/client";
-import type { chatInput } from "../modules/conversation.schema";
+import { ConversationShareType, Status, type Prisma } from "@prisma/client";
+import type { chatInput, conversationShareInput } from "../modules/conversation.schema";
 import { env } from "../config/env";
 import { AiService } from "./ai.service";
 import type { GenerateOptions } from "../types/ai.types";
@@ -283,9 +283,10 @@ Rules:
     }
   },
 
-  async conversationList(userId: string, { nextToken, pageSize, search }: PaginationType) {
+  async conversationList({ nextToken, pageSize, search }: PaginationType, userId: string) {
     const whereCondition: Prisma.ConversationWhereInput = {
       userId,
+      isPinned: false,
       status: "ACTIVE",
       deletedAt: null,
     };
@@ -298,6 +299,7 @@ Rules:
       select: {
         id: true,
         name: true,
+        isPinned: true,
       },
       skip: 0,
       take: pageSize + 1,
@@ -332,12 +334,41 @@ Rules:
     return { data, pageSize, nextToken: nextId };
   },
 
-  async getConversation(conversationId: string, userId: string) {
-    const data = await prisma.conversation.findFirst({
-      where: { id: conversationId, userId, status: "ACTIVE", deletedAt: null },
+  async pinnedConversationList(userId: string) {
+    const data = await prisma.conversation.findMany({
+      where: {
+        userId,
+        isPinned: true,
+        status: "ACTIVE",
+        deletedAt: null,
+      },
       select: {
         id: true,
         name: true,
+        isPinned: true,
+      },
+      orderBy: [
+        {
+          updatedAt: "desc",
+        },
+      ],
+    });
+
+    return data;
+  },
+
+  async getConversation(conversationId: string, userId: string) {
+    const data = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        OR: [{ conversationShare: { conversationId } }, { userId }],
+        status: "ACTIVE",
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        conversationShare: { select: { id: true, type: true, userMails: true } },
       },
     });
 
@@ -379,11 +410,16 @@ Rules:
 
   async conversationMessages(
     conversationId: string,
-    userId: string,
     { pageSize, nextToken }: PaginationType,
+    userId?: string,
   ) {
     const conversation = await prisma.conversation.findFirst({
-      where: { id: conversationId, userId, status: "ACTIVE", deletedAt: null },
+      where: {
+        id: conversationId,
+        OR: [{ conversationShare: { conversationId } }, { userId }],
+        status: "ACTIVE",
+        deletedAt: null,
+      },
       select: {
         id: true,
         name: true,
@@ -453,5 +489,142 @@ Rules:
     }
 
     return message;
+  },
+
+  async pinConversation(id: string, userId: string, isPinned: boolean) {
+    const pinnedCount = await prisma.conversation.count({
+      where: { userId, isPinned: true, status: Status.ACTIVE },
+    });
+
+    console.log("isPinned", isPinned);
+    if (isPinned && pinnedCount >= env.MAX_PIN_CONVERSATION) {
+      throw new ApiError(400, "Max limit reached");
+    }
+    try {
+      await prisma.conversation.update({
+        where: { id, userId },
+        data: { isPinned },
+        select: {
+          id: true,
+        },
+      });
+    } catch {
+      throw new ApiError(400, "Invalid Id");
+    }
+  },
+
+  async conversationShareOptions() {
+    return Object.values(ConversationShareType).map((v) => ({
+      value: v,
+      label: v.charAt(0).toUpperCase() + v.slice(1).toLowerCase().replaceAll("_", " "),
+    }));
+  },
+
+  async shareConversation(data: conversationShareInput, userId: string) {
+    const conversation = await prisma.conversation.findFirst({
+      where: { id: data.id, userId },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!conversation) {
+      throw new ApiError(400, "Invalid id");
+    }
+
+    const share = await prisma.conversationShare.upsert({
+      where: { conversationId: conversation.id },
+      update: {
+        type: data.type,
+        userMails: data.type === ConversationShareType.SPECIFIC_USER ? data.userMails || [] : [],
+        createdBy: userId,
+      },
+      create: {
+        conversationId: conversation.id,
+        type: data.type,
+        userMails: data.type === ConversationShareType.SPECIFIC_USER ? data.userMails || [] : [],
+        createdBy: userId,
+      },
+      select: { id: true },
+    });
+
+    return share;
+  },
+
+  async getShareConversation({
+    id,
+    conversationId,
+    userId,
+  }: {
+    id?: string;
+    conversationId?: string;
+    userId?: string;
+  }) {
+    let whereCondition = {};
+
+    if (id) {
+      whereCondition = { id };
+    } else if (conversationId) {
+      whereCondition = { conversationId };
+    } else {
+      throw new ApiError(400, "Not fount");
+    }
+
+    try {
+      var share = await prisma.conversationShare.findFirst({
+        where: {
+          ...whereCondition,
+          conversation: {
+            status: Status.ACTIVE,
+          },
+        },
+        select: {
+          type: true,
+          userMails: true,
+          conversation: {
+            select: {
+              id: true,
+              name: true,
+              userId: true,
+            },
+          },
+        },
+      });
+    } catch {
+      throw new ApiError(400, "Not fount");
+    }
+
+    if (!share || !share.conversation) {
+      throw new ApiError(400, "Not fount");
+    }
+
+    // Allow owner full access
+    if (userId && userId === share.conversation.userId) {
+      return share.conversation;
+    }
+
+    if (share.type === ConversationShareType.RESTRICTED) {
+      throw new ApiError(400, "Not fount");
+    }
+
+    if (share.type === ConversationShareType.SPECIFIC_USER) {
+      if (!userId) throw new ApiError(403, "Permission denied");
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+
+      if (!user) throw new ApiError(403, "Permission denied");
+
+      const userEmail = user.email.toLowerCase().trim();
+      const hasAccess = share.userMails?.some((mail) => mail.toLowerCase().trim() === userEmail);
+
+      if (!hasAccess) {
+        throw new ApiError(403, "Permission denied");
+      }
+    }
+
+    return share.conversation;
   },
 };

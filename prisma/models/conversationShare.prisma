@@ -1,0 +1,21 @@
+enum ConversationShareType {
+  RESTRICTED
+  PUBLIC
+  SPECIFIC_USER
+}
+
+model ConversationShare {
+  id             String                @id @default(uuid()) @db.Uuid
+  conversationId String                @unique @db.Uuid
+  type           ConversationShareType @default(RESTRICTED)
+  userMails      String[]              @default([])
+  createdAt      DateTime              @default(now())
+  createdBy      String                @db.Uuid
+  updatedAt      DateTime              @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([userMails, type], where: { type: "SPECIFIC_USER" })
+  @@map("conversation_share")
+}

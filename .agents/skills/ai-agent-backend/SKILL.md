@@ -22,6 +22,7 @@ backend/
 │   ├── models/                      # Modular Prisma schema definitions (1 model per file)
 │   │   ├── apiTokens.prisma         # Encrypted user provider API keys (AES-256)
 │   │   ├── conversationMessages.prisma # Message tree nodes with parentId chaining
+│   │   ├── conversationShare.prisma # Conversation sharing config (PUBLIC / SPECIFIC_USER)
 │   │   ├── conversations.prisma     # Conversation sessions/threads
 │   │   ├── models.prisma            # Catalog of active/inactive AI models
 │   │   ├── providers.prisma         # AI Providers (Gemini, OpenAI, etc.)
@@ -38,26 +39,26 @@ backend/
 │   │   └── prisma.ts                # PrismaClient singleton instance
 │   ├── controllers/                 # Express request handlers (wrapped in asyncHandler)
 │   │   ├── auth.controller.ts       # Registration, login, logout, verification, password reset
-│   │   ├── conversation.controller.ts # Streaming generation, retries, list, delete
+│   │   ├── conversation.controller.ts # Streaming generation, retries, share config & public shared reads
 │   │   ├── provider.controller.ts   # Provider listing & update
 │   │   ├── apiToken.controller.ts   # User-encrypted API token CRUD
 │   │   └── user.controller.ts       # User profiles & admin user management
 │   ├── middlewares/
-│   │   ├── auth.middleware.ts       # JWT verification (sets req.user)
+│   │   ├── auth.middleware.ts       # JWT verification (sets req.user, supports WHITELIST_PATHS)
 │   │   ├── admin.middleware.ts      # Enforces ADMIN role guard
 │   │   ├── error.middleware.ts      # Global centralized error formatting
 │   │   └── validate.middleware.ts   # Zod request body/query validation
 │   ├── modules/                     # Zod request validation schemas (*.schema.ts)
 │   ├── routes/                      # Route mappers
 │   │   ├── auth.route.ts            # /auth routes
-│   │   ├── conversation.route.ts    # /conversation routes
+│   │   ├── conversation.route.ts    # /conversation and /shared/conversation routes
 │   │   ├── provider.route.ts        # /provider routes
 │   │   ├── token.route.ts           # /api-token routes
 │   │   ├── user.route.ts            # /user routes
 │   │   └── index.ts                 # Master router mounting all sub-routes
 │   ├── services/                    # Business logic & database operations
 │   │   ├── ai.service.ts            # Unified OpenAI/Gemini completion & streaming engine
-│   │   ├── conversation.service.ts  # History resolution, sliding window, tree branching
+│   │   ├── conversation.service.ts  # History resolution, tree branching, sharing permissions
 │   │   ├── provider.service.ts      # Model discovery & provider synchronization
 │   │   ├── apiToken.service.ts      # AES-256 token encryption & decryption
 │   │   ├── auth.service.ts          # Password hashing, mail verification & JWT lifecycle
@@ -154,6 +155,11 @@ sequenceDiagram
    - Intermediate `TOOL` records store `toolCalls` JSON for full execution auditability.
 4. **Token Usage Metrics**:
    - Each assistant turn records `promptTokens`, `completionTokens`, and `totalTokens` in `TokenUsage`.
+5. **Conversation Sharing & Public Access Control**:
+   - `conversation_share` model associates with `conversations` via 1-to-1 relationship.
+   - Sharing types: `PUBLIC` (open access) and `SPECIFIC_USER` (restricted to email whitelist in `userMails` array).
+   - Owner access bypass: If `userId === conversation.userId`, access is granted regardless of share type.
+   - Auth Middleware Path Whitelist: `WHITELIST_PATHS` supports exact paths or regex (`/^\/shared\/conversation\/.*$/`), allowing public reads without 401 when unauthenticated while still attaching `req.user` if valid JWT is present.
 
 ---
 
