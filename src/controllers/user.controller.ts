@@ -54,6 +54,6 @@ export const userController = {
 
     await userService.changePassword((req.params.id || req.user.id) as string, req.body);
 
-    sendResponse(res, 200, [], "User updated succesfully");
+    sendResponse(res, 200, [], "Password updated successfully");
   },
 };

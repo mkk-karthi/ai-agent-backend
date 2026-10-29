@@ -1,10 +1,12 @@
 # MKK AI Agent - Backend
 
-High-performance TypeScript backend API for the MKK AI Agent platform. Built with Express.js v5, Prisma ORM, and PostgreSQL, supporting multi-provider AI completions (OpenAI, Gemini), tool execution (Web Search), and conversation tree management.
+A powerful and reliable backend API server for the MKK AI Agent platform. Built with **Node.js**, **Express.js v5**, **TypeScript**, **Prisma ORM**, and **PostgreSQL**.
+
+It handles user accounts, chat conversations, live streaming responses, and communicates with AI providers (OpenAI and Google Gemini) with automatic web search capabilities.
 
 ---
 
-## 🔗 Repositories
+## 🔗 Project Links
 
 - **Backend (This Repository)**: [https://github.com/mkk-karthi/ai-agent-backend](https://github.com/mkk-karthi/ai-agent-backend)
 - **Frontend Repository**: [https://github.com/mkk-karthi/ai-agent-frontend](https://github.com/mkk-karthi/ai-agent-frontend)
@@ -13,7 +15,7 @@ High-performance TypeScript backend API for the MKK AI Agent platform. Built wit
 
 ## 📸 Screenshots
 
-### 💬 Real-Time Chat Interface
+### 💬 Real-Time Chat & Autonomous Web Search
 ![Chat Interface](docs/images/chat-interface.png)
 
 ### 📊 Admin Analytics Dashboard
@@ -21,174 +23,199 @@ High-performance TypeScript backend API for the MKK AI Agent platform. Built wit
 
 ---
 
-## 🛠️ Tech Stack
+## ✨ Features at a Glance
 
-- **Runtime & Framework**: Node.js, TypeScript, Express.js 5.2
-- **Database & ORM**: PostgreSQL, Prisma ORM 7.10 (modular schemas)
-- **AI SDKs & Providers**: `openai` (Chat Completions & compatible endpoints)
-- **Security & Auth**: JWT (HttpOnly Cookies), bcrypt, AES encryption (`cryptoUtils`), Helmet, CORS, Rate Limiting
-- **Validation & Tools**: Zod, Winston logger, Nodemailer
-- **Testing**: Jest, Supertest, ts-jest
+- ⚡ **Live Streaming Responses (SSE)**: Streams AI answers token-by-token directly to the user as they are generated.
+- 🌐 **Automatic Web Search**: When a question needs real-time internet info, the AI searches the web on the fly (using Tavily, Jina AI, or DuckDuckGo fallback—no paid key required to test).
+- 🤖 **Multiple AI Providers**: Seamlessly switches between OpenAI (GPT-4o) and Google Gemini (Gemini 2.5/2.0 Flash) models using a single unified interface.
+- 🌳 **Smart Chat Memory & Branching**: Saves conversation history, letting users edit earlier messages or retry answers without losing previous turns.
+- 🔗 **Chat Sharing Control**:
+  - **Restricted (Default)**: Private to the conversation owner.
+  - **Public**: Anyone with the link can view the conversation in read-only mode.
+  - **Specific Users**: Only designated email addresses can access the chat.
+- 🔑 **Google Sign-In & Email Authentication**:
+  - Full Google OAuth2 sign-in with secure cookies and clean URLs.
+  - Traditional email/password signup and verification.
+  - Users who sign up with Google can optionally set a password anytime.
+- 🛡️ **Bot Protection (reCAPTCHA v3)**: Protects login, registration, and password reset endpoints from automated bots.
+- 🪙 **Token Usage Tracking**: Automatically counts and records prompt tokens and response tokens per message.
+- 🔒 **Encrypted API Keys**: Users can add their own OpenAI or Gemini API keys, which are safely encrypted with AES-256 in the database.
 
 ---
 
-## 📁 Directory Structure
+## 🛠️ Tech Stack
+
+| Tool | Purpose | Why We Use It |
+| :--- | :--- | :--- |
+| **Node.js & Express.js 5** | Web Server | Fast, lightweight, and modern API framework |
+| **TypeScript** | Language | Type-safe code that prevents runtime errors |
+| **PostgreSQL & Prisma ORM** | Database | Clean database schema with migrations and relations |
+| **OpenAI SDK** | AI Engine | Unified client for both OpenAI and Google Gemini APIs |
+| **Passport.js** | Authentication | Handles Google OAuth2 authentication smoothly |
+| **Zod** | Validation | Checks and validates all incoming API data |
+| **bcrypt & crypto** | Security | Secure password hashing and AES-256 key encryption |
+| **reCAPTCHA v3** | Anti-Bot | Transparent score-based verification |
+
+---
+
+## 📁 Project Folder Structure
 
 ```text
 backend/
 ├── prisma/
-│   ├── models/                  # Modular Prisma schema definitions
-│   │   ├── apiTokens.prisma     # Encrypted user provider API keys
-│   │   ├── conversationMessages.prisma # Message nodes (tree structure)
-│   │   ├── conversationShare.prisma    # Conversation sharing (PUBLIC / SPECIFIC_USER)
-│   │   ├── conversations.prisma # Chat sessions/threads
-│   │   ├── models.prisma        # Available AI models
-│   │   ├── providers.prisma     # AI Providers (Gemini, OpenAI, etc.)
+│   ├── models/                  # Separate schema file for each database table
+│   │   ├── apiTokens.prisma     # Encrypted user API keys
+│   │   ├── conversationMessages.prisma # Chat messages with tree history
+│   │   ├── conversationShare.prisma    # Sharing settings (Restricted, Public, Specific Users)
+│   │   ├── conversations.prisma # Chat sessions
+│   │   ├── models.prisma        # Available AI models (GPT-4o, Gemini, etc.)
+│   │   ├── providers.prisma     # AI Providers (OpenAI, Gemini)
 │   │   ├── refreshToken.prisma  # JWT refresh tokens
 │   │   ├── session.prisma       # Active user sessions
-│   │   ├── tokenUsage.prisma    # Token tracking per message
-│   │   └── user.prisma          # User accounts & roles
-│   ├── schema.prisma            # Datasource & generator config
-│   ├── seed.ts                  # Admin user & model discovery seed
-│   └── conversationSeed.ts      # Seed sample conversation data
+│   │   ├── tokenUsage.prisma    # Token usage per message
+│   │   └── user.prisma          # User accounts and roles (USER, ADMIN)
+│   ├── schema.prisma            # Main Prisma configuration
+│   ├── seed.ts                  # Seeds initial admin user and default AI models
+│   └── conversationSeed.ts      # Seeds sample conversation data
 ├── src/
-│   ├── config/                  # Environment (env.ts) and Prisma client (prisma.ts)
-│   ├── controllers/             # Auth, User, Conversation, Provider, Token handlers
-│   ├── middlewares/             # Auth, Admin, Validation, and Error middlewares
+│   ├── config/                  # Environment, Prisma client, and Passport OAuth setup
+│   ├── controllers/             # Request handlers for Auth, Conversations, Users, Providers
+│   ├── middlewares/             # Security, JWT auth, reCAPTCHA, and error handlers
 │   ├── modules/                 # Zod validation schemas
 │   ├── routes/                  # Express route definitions
-│   ├── services/
-│   │   ├── ai.service.ts        # Unified OpenAI/Gemini completion & streaming engine
-│   │   ├── apiToken.service.ts  # Encrypted API key management
-│   │   ├── auth.service.ts      # Auth logic, JWT tokens, and mail verification
-│   │   ├── conversation.service.ts # Chat lifecycle & history orchestration
-│   │   ├── provider.service.ts  # Provider & model catalogue management
-│   │   └── user.service.ts      # User profile & administrative operations
-│   ├── types/                   # TypeScript interfaces (ai.types.ts)
-│   ├── utils/                   # Helpers (ai-tools, crypto, jwt, logger, mail)
-│   ├── app.ts                   # Express app configuration & middleware pipeline
-│   └── server.ts                # Server bootstrapper & listener
-├── tests/                       # Jest test suites
-├── .env.example                 # Environment variables template
-├── jest.config.ts               # Test configuration
-├── tsconfig.json                # Production TypeScript config
-└── tsconfig.test.json           # Test TypeScript config
+│   ├── services/                # Business logic (AI streaming, chat history, auth, user management)
+│   ├── utils/                   # Helpers (web search tool, JWT, mailer, encryption, password)
+│   ├── app.ts                   # Express application setup
+│   └── server.ts                # Server startup script
+├── tests/                       # Automated tests (Jest)
+├── .env.example                 # Template for environment settings
+├── package.json                 # Dependencies and scripts
+└── tsconfig.json                # TypeScript compiler configuration
 ```
 
 ---
 
-## 🤖 Core Agent Capabilities
+## 🚀 Getting Started (Beginner Guide)
 
-The backend architecture includes:
-- 🌐 **Autonomous Web Search**: Multi-tiered search pipeline (Tavily, Jina AI, DuckDuckGo) with zero mandatory configuration.
-- ⚡ **Real-Time Streaming SSE**: Incremental token delivery and streaming tool call resolution.
-- 🤖 **Multi-Provider Orchestration**: Unified abstraction over OpenAI and Google Gemini models.
-- 🧠 **Context & Tree Memory**: Sliding window context pruning with parent-child message branching.
-- 🪙 **Token Metering**: Accurate turn-by-turn token accounting (`token_usage`).
-- 🔐 **Cryptographic Security**: AES-256 encrypted isolation for user API credentials.
-- 🔗 **Shareable Conversations**: Granular thread sharing (`PUBLIC` or `SPECIFIC_USER` email restrictions) with no-auth public read endpoints.
-
----
-
-## 🧠 Agent Memory Base Architecture
-
-The agent's memory is structured into three layers to balance latency, token limits, and historical context:
-
-```mermaid
-graph TD
-    A[Incoming Prompt] --> B[Sliding Context Window]
-    B -->|Active Messages| C[AiService LLM Request]
-    C -->|Tool Call| D[Tool Memory Execution]
-    D -->|Tool Results| C
-    C -->|Response Completed| E[Tree-Structured DB Memory]
-    E -->|parentId link| F[(PostgreSQL: conversation_messages)]
-    E -->|Cost Analysis| G[(PostgreSQL: token_usage)]
-```
-
-### 1. Sliding Window Context (Short-Term Memory)
-- **Token Efficiency**: Pulls the most recent `MAX_HISTORY_MESSAGES` (active status) from database order by `createdAt: desc`.
-- **Role Normalization**: Formats past messages into `{ role, content }` tuples (`system`, `user`, `assistant`, `tool`) before passing them to the model context.
-
-### 2. Relational Tree Structure (Long-Term Memory)
-- **Message Chaining**: Every message in `conversation_messages` has an optional self-referencing `parentId` pointing to its ancestor.
-- **Branching, Retries & Edits**:
-  - Editing a past user prompt creates a new child node under that prompt's `parentId`, preserving prior conversation turns without destructive overwrites.
-  - Retrying an assistant response deletes/inactivates the failed draft and regenerates a fresh sibling response linked to the original user turn.
-
-### 3. Tool Execution Memory
-- Tool invocations (`toolCalls` JSON) and returned data are saved as intermediate `TOOL` and `ASSISTANT` records in the database.
-- Provides traceability for external lookups (e.g. search queries and results) across multiple conversation turns.
-
-### 4. Encrypted Provider Credentials Memory
-- User-provided API keys are AES-256 encrypted (`cryptoUtils.ts`) and loaded per provider request, with automatic fallback to platform environment keys.
-
----
-
-## 🔄 Core Workflows
-
-### 1. Chat Completion & Streaming Workflow
-1. **Client Request**: `POST /conversation/generate-stream-content` with prompt, model ID, and optional conversation ID.
-2. **Context Resolution**: Retrieves conversation thread and sliding window history.
-3. **Provider Initialization**: `AiService` decrypts active API key, configures model credentials, and mounts tools (`web_search`).
-4. **Execution & Tool Loop**:
-   - Model generates stream chunks or triggers tool calling.
-   - If `web_search` is triggered: executes Tavily (if configured) or free fallback (Jina AI / DuckDuckGo), returns tool output back to model loop.
-5. **Stream Delivery**: Pushes Server-Sent Events (`coversation`, `stream`, `error`, `end`) to client.
-6. **Persistence**: Saves assistant reply, tool payload, and `token_usage` metrics.
-
-### 2. Model & Provider Management Workflow
-1. Admin seeds models via `npx tsx prisma/seed.ts` or updates provider configuration.
-2. Users configure custom tokens via `/api-token` routes.
-3. Tokens are verified via lightweight health checks before becoming `ACTIVE`.
-
----
-
-## 🚀 Getting Started
+Follow these steps to get the backend running locally.
 
 ### Prerequisites
-- Node.js v18+
-- PostgreSQL 14+
 
-### Setup
+- **Node.js** (v18 or higher)
+- **PostgreSQL** (v14 or higher running on your system)
+- **npm** (comes with Node.js)
+
+### Step 1: Install Dependencies
 
 ```bash
-# 1. Install dependencies
+cd backend
 npm install
+```
 
-# 2. Configure environment
+### Step 2: Set Up Environment Variables
+
+Copy the example file to create your `.env`:
+
+```bash
 cp .env.example .env
-# Update DATABASE_URL, JWT secrets, ENCRYPTION_KEY, etc.
+```
 
-# 3. Apply Prisma migrations & seed database
+Open `.env` in your text editor and set your configuration:
+- `DATABASE_URL`: Your PostgreSQL connection string (e.g., `postgresql://postgres:password@localhost:5432/ai_agent_db`).
+- `ACCESS_TOKEN_SECRET` & `REFRESH_TOKEN_SECRET`: Random secret strings for JWT tokens.
+- `ENCRYPTION_KEY`: A 32-character string used to encrypt stored API keys.
+- `GEMINI_API_KEY` / `OPENAI_API_KEY`: (Optional) Default API keys for the server.
+
+> [!CAUTION]
+> **Never commit your `.env` file to version control.** It contains private database passwords and secret keys. Always use `.env.example` as a template.
+
+### Step 3: Run Database Migrations & Seed Data
+
+Run this command to create your database tables and seed the initial admin account and default AI models:
+
+```bash
+# Apply database migrations
 npm run prisma:migrate
+
+# Seed admin user and default models
 npx tsx prisma/seed.ts
+```
 
-# 4. Start development server
+> **Default Admin Account:**
+> - Email: `admin@gmail.com`
+> - Password: `Admin@123`
+
+### Step 4: Start the Development Server
+
+```bash
 npm run dev
+```
 
-# 5. Build for production
+The server will start at **`http://localhost:5000`**.
+
+### Step 5: Build for Production
+
+```bash
 npm run build
 npm start
 ```
 
-### Initial Admin & Provider Configuration
+---
 
-Once setup and database seeding are complete:
-1. Log in with the admin account (seeded default: `admin@gmail.com` / `Admin@123`).
-2. Go to the **Admin Dashboard > Providers** page in the frontend UI.
-3. Configure your **Gemini** and **OpenAI** API keys.
-4. Migrate/sync available models from providers.
-5. Update provider and model statuses (`ACTIVE` / `INACTIVE`) as needed.
+## 💡 How Key Features Work (Simple Explanations)
+
+### 1. AI Streaming Chat Flow
+1. The frontend sends the user's prompt to `POST /conversation/generate-stream-content`.
+2. The server loads recent messages from the database so the AI remembers the conversation context.
+3. The server calls the AI model (OpenAI or Gemini) using streaming.
+4. As words arrive from the AI, the server sends them immediately to the frontend using Server-Sent Events (SSE).
+5. When the answer is done, the server saves the message and logs token usage in PostgreSQL.
+
+### 2. Automatic Web Search
+1. When the AI decides it needs fresh data (for example, "What is the latest news today?"), it calls the `web_search` tool.
+2. The server tries searching via:
+   - **Tavily API** (if an API key is provided).
+   - **Jina AI** (free, no API key needed).
+   - **DuckDuckGo** (fallback scraper).
+3. The search results are fed back into the AI, which writes a grounded answer with citations.
+
+### 3. Conversation Sharing
+- Each conversation has a sharing setting in the database:
+  - `RESTRICTED` (default): Only the owner can view it.
+  - `PUBLIC`: Anyone can view the chat at `/shared/conversation/:id` without logging in.
+  - `SPECIFIC_USER`: Only users whose emails are in the allowed list can view it.
+
+### 4. Google OAuth & Hybrid Password
+- Users can click **Sign in with Google** to log in without a password.
+- If a Google user later wants to log in with an email and password, they can set one in their profile settings without having to provide an "old password".
 
 ---
 
-## 📡 API Endpoints Overview
+## 📡 API Endpoints Summary
 
-| Route Group | Base Path | Key Endpoints | Description |
-| :--- | :--- | :--- | :--- |
-| **Auth** | `/auth` | `POST /register`, `/login`, `/logout`, `/verify-mail`, `/refresh-token` | User authentication & sessions |
-| **User** | `/user` | `GET /profile`, `PUT /profile`, `PUT /change-password`, `GET /list` (Admin) | Profile management & admin controls |
-| **Conversation** | `/conversation` | `POST /generate-stream-content`, `POST /retry-stream-content`, `GET /list`, `DELETE /:id`, `GET /share/options`, `POST /share` | Chat streaming, thread management, & sharing configuration |
-| **Shared Chat** | `/shared/conversation` | `GET /:id`, `GET /messages/:id` | Whitelisted public read endpoints for shared conversations |
-| **Provider** | `/provider` | `GET /list`, `PUT /:id` | AI providers & model listing |
-| **API Tokens** | `/api-token` | `POST /create`, `GET /list`, `DELETE /:id` | Encrypted user provider API keys |
+| Group | Method & Route | What It Does |
+| :--- | :--- | :--- |
+| **Auth** | `POST /auth/register` | Create a new user account (protected with reCAPTCHA) |
+| | `POST /auth/login` | Log in with email and password (protected with reCAPTCHA) |
+| | `POST /auth/logout` | Log out and clear session cookies |
+| | `GET /auth/google` | Start Google OAuth2 sign-in |
+| | `GET /auth/google/callback` | Google OAuth2 redirect callback |
+| | `POST /auth/forgot-password` | Send password reset email |
+| | `POST /auth/reset-password` | Reset password using email OTP |
+| **Conversations** | `POST /conversation/generate-stream-content` | Stream AI chat response |
+| | `POST /conversation/retry-stream-content` | Retry or regenerate an AI response |
+| | `GET /conversation/list` | List user's conversations with pagination |
+| | `DELETE /conversation/:id` | Delete a conversation |
+| | `POST /conversation/share` | Update sharing settings (Restricted, Public, Specific Users) |
+| **Public Shared** | `GET /shared/conversation/:id` | Read a shared conversation (no login required for public chats) |
+| **User Profile** | `GET /user/:id` | Get user profile |
+| | `PUT /user` | Update profile information |
+| | `POST /user/change-password` | Change password (or create password for Google accounts) |
+| **Providers** | `GET /provider/list` | List active AI models and providers |
+| **API Tokens** | `POST /token` | Add or update an encrypted personal API key |
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.

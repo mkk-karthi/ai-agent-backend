@@ -16,6 +16,7 @@ export const registerSchema = z
     confirmPassword: z
       .string("Confirm password must be a string")
       .min(1, "Please confirm your password"),
+    captchaToken: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -25,10 +26,12 @@ export const registerSchema = z
 export const loginSchema = z.object({
   email: z.email("Invalid email").transform((v) => v.toLowerCase().trim()),
   password: passwordSchema,
+  captchaToken: z.string().optional(),
 });
 
 export const forgotPasswordSchema = z.object({
   email: z.email("Invalid email").transform((v) => v.toLowerCase().trim()),
+  captchaToken: z.string().optional(),
 });
 
 export const resetPasswordSchema = z
@@ -37,6 +40,7 @@ export const resetPasswordSchema = z
     otp: z.string().regex(/^\d+$/, "Must be only digits").length(6, "OTP must be 6 characters"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "Please confirm your password"),
+    captchaToken: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",

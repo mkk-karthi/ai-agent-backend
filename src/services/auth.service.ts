@@ -66,6 +66,10 @@ export const authService = {
 
     if (user.status != "ACTIVE") throw new ApiError(401, "Access denied");
 
+    if (!user.password) {
+      throw new ApiError(400, "Invalid email & password");
+    }
+
     const verify = await comparePassword(input.password, user.password);
 
     if (!verify) {
@@ -98,6 +102,8 @@ export const authService = {
         roleId: RoleValueMap[user.role],
         mailVerifiedAt: user.mailVerifiedAt,
         createdAt: user.createdAt,
+        authProvider: user.authProvider,
+        hasPassword: Boolean(user.password),
       },
       accessToken,
       refreshToken,
@@ -304,7 +310,7 @@ export const authService = {
       throw new ApiError(400, "OTP expired");
     }
 
-    const verify = await comparePassword(input.password, user.password);
+    const verify = await comparePassword(input.password, user.password ?? "");
 
     if (verify) {
       throw new ApiError(400, "Password have already taken, create new password");
@@ -317,5 +323,40 @@ export const authService = {
       data: { expiredAt: new Date() },
       where: { id: session.id },
     });
+  },
+
+  async googleLogin(userId: string) {
+    const user = await prisma.user.findFirst({ where: { id: userId } });
+    if (!user) throw new ApiError(400, "User not found");
+
+    if (user.status !== "ACTIVE") throw new ApiError(401, "Access denied");
+
+    const accessToken = generateAccessToken({ userId: user.id });
+    const refreshToken = generateRefreshToken({ userId: user.id });
+    const refreshTokenHash = hashToken(refreshToken);
+    const refreshTokenExpiry = new Date(
+      Date.now() + parseInt(env.JWT_REFRESH_EXPIRES_IN) * 24 * 60 * 60 * 1000,
+    );
+
+    await prisma.refreshToken.create({
+      data: { token: refreshTokenHash, userId: user.id, expiredAt: refreshTokenExpiry },
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        roleId: RoleValueMap[user.role],
+        mailVerifiedAt: user.mailVerifiedAt,
+        createdAt: user.createdAt,
+        authProvider: user.authProvider,
+        hasPassword: Boolean(user.password),
+      },
+      accessToken,
+      refreshToken,
+    };
   },
 };

@@ -22,7 +22,7 @@ backend/
 │   ├── models/                      # Modular Prisma schema definitions (1 model per file)
 │   │   ├── apiTokens.prisma         # Encrypted user provider API keys (AES-256)
 │   │   ├── conversationMessages.prisma # Message tree nodes with parentId chaining
-│   │   ├── conversationShare.prisma # Conversation sharing config (PUBLIC / SPECIFIC_USER)
+│   │   ├── conversationShare.prisma # Conversation sharing config (RESTRICTED [default] / PUBLIC / SPECIFIC_USER)
 │   │   ├── conversations.prisma     # Conversation sessions/threads
 │   │   ├── models.prisma            # Catalog of active/inactive AI models
 │   │   ├── providers.prisma         # AI Providers (Gemini, OpenAI, etc.)
@@ -35,22 +35,24 @@ backend/
 │   └── conversationSeed.ts          # Sample conversation data seed
 ├── src/
 │   ├── config/
-│   │   ├── env.ts                   # Zod-validated environment configuration (TAVILY_API_KEY optional)
+│   │   ├── env.ts                   # Zod-validated environment configuration (TAVILY_API_KEY optional, RECAPTCHA vars)
+│   │   ├── passport.ts              # Passport.js Google OAuth2 Strategy configuration
 │   │   └── prisma.ts                # PrismaClient singleton instance
 │   ├── controllers/                 # Express request handlers (wrapped in asyncHandler)
-│   │   ├── auth.controller.ts       # Registration, login, logout, verification, password reset
+│   │   ├── auth.controller.ts       # Registration, login, logout, verification, password reset, googleCallback
 │   │   ├── conversation.controller.ts # Streaming generation, retries, share config & public shared reads
 │   │   ├── provider.controller.ts   # Provider listing & update
 │   │   ├── apiToken.controller.ts   # User-encrypted API token CRUD
-│   │   └── user.controller.ts       # User profiles & admin user management
+│   │   └── user.controller.ts       # User profiles, password change/create & admin user management
 │   ├── middlewares/
 │   │   ├── auth.middleware.ts       # JWT verification (sets req.user, supports WHITELIST_PATHS)
 │   │   ├── admin.middleware.ts      # Enforces ADMIN role guard
+│   │   ├── captcha.middleware.ts    # Google reCAPTCHA v3 verification middleware
 │   │   ├── error.middleware.ts      # Global centralized error formatting
 │   │   └── validate.middleware.ts   # Zod request body/query validation
 │   ├── modules/                     # Zod request validation schemas (*.schema.ts)
 │   ├── routes/                      # Route mappers
-│   │   ├── auth.route.ts            # /auth routes
+│   │   ├── auth.route.ts            # /auth routes (protected with verifyCaptcha)
 │   │   ├── conversation.route.ts    # /conversation and /shared/conversation routes
 │   │   ├── provider.route.ts        # /provider routes
 │   │   ├── token.route.ts           # /api-token routes
@@ -61,8 +63,9 @@ backend/
 │   │   ├── conversation.service.ts  # History resolution, tree branching, sharing permissions
 │   │   ├── provider.service.ts      # Model discovery & provider synchronization
 │   │   ├── apiToken.service.ts      # AES-256 token encryption & decryption
-│   │   ├── auth.service.ts          # Password hashing, mail verification & JWT lifecycle
-│   │   └── user.service.ts          # User queries & profile updates
+│   │   ├── auth.service.ts          # Password hashing, Google OAuth, mail verification & JWT lifecycle
+│   │   ├── recaptcha.service.ts     # Google reCAPTCHA v3 siteverify token validation
+│   │   └── user.service.ts          # User queries, profile updates & hybrid password creation
 │   ├── types/
 │   │   └── ai.types.ts              # GenerateOptions, GenerateResult, ToolDefinition
 │   ├── utils/
@@ -157,9 +160,19 @@ sequenceDiagram
    - Each assistant turn records `promptTokens`, `completionTokens`, and `totalTokens` in `TokenUsage`.
 5. **Conversation Sharing & Public Access Control**:
    - `conversation_share` model associates with `conversations` via 1-to-1 relationship.
-   - Sharing types: `PUBLIC` (open access) and `SPECIFIC_USER` (restricted to email whitelist in `userMails` array).
+   - Sharing types: `RESTRICTED` (default, private), `PUBLIC` (open access), and `SPECIFIC_USER` (restricted to email whitelist in `userMails` array).
    - Owner access bypass: If `userId === conversation.userId`, access is granted regardless of share type.
    - Auth Middleware Path Whitelist: `WHITELIST_PATHS` supports exact paths or regex (`/^\/shared\/conversation\/.*$/`), allowing public reads without 401 when unauthenticated while still attaching `req.user` if valid JWT is present.
+6. **Google OAuth2 & Hybrid Password Management**:
+   - `passport.use(new GoogleStrategy(...))` configured in `src/config/passport.ts` (stateless JWT architecture).
+   - Find-or-create user flow with email verification auto-set; links existing accounts.
+   - Callback redirect: `GET /auth/google/callback` sets `refresh-token` HttpOnly cookie and redirects to `/auth/google/callback?token=${accessToken}` without exposing personal user data in URL query parameters.
+   - Profile & Password Guard: `auth.service.ts` blocks manual email/password login if `!user.password` (`"Password is not set for this account. Please sign in with Google."`).
+   - Hybrid Creation: In `user.service.ts` (`changePassword`), if `!user.password`, `oldPassword` is optional and bypassed, allowing Google accounts to create a password for manual login.
+7. **Google reCAPTCHA v3 Bot Protection**:
+   - Express middleware `verifyCaptcha(action)` in `src/middlewares/captcha.middleware.ts` enforces anti-bot validation on `/auth/login` (`login`), `/auth/register` (`register`), `/auth/forgot-password` (`forgot_password`), and `/auth/reset-password` (`reset_password`).
+   - Verification service (`recaptcha.service.ts`) calls Google `https://www.google.com/recaptcha/api/siteverify` using `RECAPTCHA_SECRET_KEY` and validates against `RECAPTCHA_SCORE_THRESHOLD` (default 0.5) and action matching.
+   - Development Fallback: If `RECAPTCHA_SECRET_KEY` is empty in `development` or `test` mode, logs a warning and gracefully passes to prevent blocking local development.
 
 ---
 
@@ -195,3 +208,5 @@ npm test
 - **Async Handling**: Every controller method must be wrapped in `asyncHandler` (`src/utils/async-handler.ts`).
 - **Input Validation**: Validate all incoming request payloads via Zod schemas in `src/modules/`.
 - **Safe Keys**: All user-provided API tokens must be encrypted using `encryption()` before storing in database.
+- **Environment Protection**: **NEVER read or write `.env` files**. Use `.env.example` as the canonical template for variable names and schemas.
+

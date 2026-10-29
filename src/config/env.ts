@@ -38,6 +38,13 @@ const envSchema = z.object({
     .multipleOf(0.1, "Only 1 decimal place is allowed")
     .default(0.7),
   MAX_PIN_CONVERSATION: z.coerce.number().int().positive().default(5),
+
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_CALLBACK_URL: z.string().url(),
+
+  RECAPTCHA_SECRET_KEY: z.string().optional().default(""),
+  RECAPTCHA_SCORE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.5),
 });
 
 export const env = envSchema.parse(process.env);

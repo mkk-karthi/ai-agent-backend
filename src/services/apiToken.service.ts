@@ -54,7 +54,6 @@ export const apiTokenService = {
         userId: userId,
         token,
         status,
-        createdBy: userId,
       },
       update: {
         token,

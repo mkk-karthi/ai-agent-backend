@@ -22,6 +22,7 @@ type UserWithRoleDetails = {
   authProvider: unknown;
   createdAt: Date;
   roleId?: number;
+  hasPassword?: boolean;
 };
 
 export const userService = {
@@ -70,11 +71,15 @@ export const userService = {
         firstName: true,
         lastName: true,
         createdAt: true,
+        authProvider: true,
+        password: true,
       },
-    })) as UserWithRoleDetails | null;
+    })) as (UserWithRoleDetails & { password?: string | null }) | null;
 
     if (user) {
       user.roleId = RoleValueMap[user.role];
+      user.hasPassword = Boolean(user.password);
+      delete user.password;
     }
 
     return user;
@@ -114,20 +119,25 @@ export const userService = {
     const user = await prisma.user.findFirst({ where: { id } });
     if (!user) throw new ApiError(400, "Id not found");
 
-    // verify old password
-    const verify = await comparePassword(input.oldPassword, user.password);
-    if (!verify) {
-      throw new ApiError(400, "Invalid old password");
-    }
+    // If user already has a password, old password must be provided and verified
+    if (user.password) {
+      if (!input.oldPassword) {
+        throw new ApiError(400, "Old password is required");
+      }
 
-    // Verify new password is already exists
-    const compare = await comparePassword(input.password, user.password);
-    if (compare) {
-      throw new ApiError(400, "Password have already taken, create new password");
+      const verify = await comparePassword(input.oldPassword, user.password);
+      if (!verify) {
+        throw new ApiError(400, "Invalid old password");
+      }
+
+      const compare = await comparePassword(input.password, user.password);
+      if (compare) {
+        throw new ApiError(400, "Password has already been taken, create new password");
+      }
     }
 
     const passwordHash = await hashPassword(input.password);
-    const updateUser = await prisma.user.update({
+    await prisma.user.update({
       where: { id },
       data: { password: passwordHash },
     });

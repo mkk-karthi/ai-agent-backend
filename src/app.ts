@@ -9,7 +9,7 @@ import rateLimit from "express-rate-limit";
 
 const app = express();
 
-const allowedOrigins: string[] = ["https://localhost:3000"];
+const allowedOrigins: string[] = ["https://localhost:3000", "http://localhost:3000"];
 app.use(helmet());
 app.use(
   cors({

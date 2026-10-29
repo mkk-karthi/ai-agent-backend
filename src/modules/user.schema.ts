@@ -32,7 +32,7 @@ export const updateUserSchema = z
 
 export const changePasswordSchema = z
   .object({
-    oldPassword: passwordSchema,
+    oldPassword: passwordSchema.optional(),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })

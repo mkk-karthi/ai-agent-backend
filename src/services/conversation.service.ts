@@ -358,21 +358,30 @@ Rules:
   },
 
   async getConversation(conversationId: string, userId: string) {
-    const data = await prisma.conversation.findFirst({
-      where: {
-        id: conversationId,
-        OR: [{ conversationShare: { conversationId } }, { userId }],
-        status: "ACTIVE",
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        name: true,
-        conversationShare: { select: { id: true, type: true, userMails: true } },
-      },
-    });
+    try {
+      const data = await prisma.conversation.findFirst({
+        where: {
+          id: conversationId,
+          userId,
+          // OR: [{ conversationShare: { conversationId } }, { userId }],
+          status: "ACTIVE",
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          conversationShare: { select: { id: true, type: true, userMails: true } },
+        },
+      });
 
-    return data;
+      if (!data) {
+        throw new ApiError(404, "Conversation not found");
+      }
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(400, "Invalid Id");
+    }
   },
 
   async updateConversation(conversationId: string, name: string, userId: string) {

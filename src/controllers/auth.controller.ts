@@ -61,4 +61,31 @@ export const authController = {
 
     sendResponse(res, 200, {}, "Password updated");
   },
+
+  async googleCallback(req: Request, res: Response) {
+    // req.user is populated by Passport after successful Google OAuth
+    const googleUser = req.user as { id: string } | undefined;
+
+    if (!googleUser?.id) {
+      return res.redirect(`${env.FRONTEND_URL}/auth/login?error=google_failed`);
+    }
+
+    const data = await authService.googleLogin(googleUser.id);
+
+    // Set the refresh token as an httpOnly cookie (same pattern as regular login)
+    res.cookie("refresh-token", data.refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: parseInt(env.JWT_REFRESH_EXPIRES_IN) * 24 * 60 * 60 * 1000,
+    });
+
+    // Pass access token to the frontend via redirect query params (do not expose user in URL)
+    const params = new URLSearchParams({
+      token: data.accessToken,
+    });
+
+    return res.redirect(`${env.FRONTEND_URL}/auth/google/callback?${params.toString()}`);
+  },
 };
+
